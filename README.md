@@ -64,11 +64,11 @@ And thanks to Andy for his help with debug !
 
 ## Examples
 
-![](https://github.com/vmercadi/pyaxie-bot/blob/main/img/qr.PNG)  
-![](https://github.com/vmercadi/pyaxie-bot/blob/main/img/infos.PNG)  
-![](https://github.com/vmercadi/pyaxie-bot/blob/main/img/transfer.PNG)  
-![](https://github.com/vmercadi/pyaxie-bot/blob/main/img/all_axies.PNG)  
-![](https://github.com/vmercadi/pyaxie-bot/blob/main/img/all_rank.PNG)  
-![](https://github.com/vmercadi/pyaxie-bot/blob/main/img/all_mmr.PNG)  
+![](https://github.com/vmercadi/pyaxie-bot/blob/master/img/qr.PNG)  
+![](https://github.com/vmercadi/pyaxie-bot/blob/master/img/infos.PNG)  
+![](https://github.com/vmercadi/pyaxie-bot/blob/master/img/transfer.PNG)  
+![](https://github.com/vmercadi/pyaxie-bot/blob/master/img/all_axies.PNG)  
+![](https://github.com/vmercadi/pyaxie-bot/blob/master/img/all_rank.PNG)  
+![](https://github.com/vmercadi/pyaxie-bot/blob/master/img/all_mmr.PNG)  
 
 
