@@ -45,12 +45,6 @@ With this command, you'll not have to write the config in secret.yaml again
 `$payout me` = Send all scholarship SLP directly to manager account with no split  
 `$transfer 0xfrom_address 0xto_addres amount` = Transfer SLP  
 
-## Coming soon
-
-- rename axie
-- Local storage for faster bot
-- Genes for a given axie
-
 ## Donation
 
 Thanks to [ZracheSs](https://github.com/ZracheSs-xyZ) for his Payout and QR script code.
