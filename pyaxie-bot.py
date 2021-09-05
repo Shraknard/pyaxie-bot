@@ -124,11 +124,13 @@ async def on_message(message):
         await message.channel.send("\n\n------------------------------------------------\n" +
                                     "\n**Commands for everybody :**\n" +
                                     "\n`$infos` = Send all the infos about your account  " +
+                                    "\n`$infos 266011891353903121` = Send infos for the given discord ID  " +
                                     "\n`$qr` = Send your QR code  " +
                                     "\n`$mmr` = Send your current MMR  " +
                                     "\n`$rank` = Send your current rank" +
                                     "\n`$axies` = Send the list of axies of your account" +
                                     "\n`$axies 506011891353903121` = Send axies list of given discord ID" +
+                                    "\n`$self_payout 0xScholar_Personal_Address` = Allow scholar to claim and payout to the personal address they give. (NOT FULLY TESTED YET) " +
                                     "\n\n**Commands for manager :**\n" +
                                     "\n`$claim 506011891353903121` = Claim for the given discord ID (Manager only)  " +
                                     "\n`$all_claim` = Claim for all the scholars (Manager only)  " +
