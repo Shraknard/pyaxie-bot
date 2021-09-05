@@ -1,6 +1,6 @@
 # Pyaxie bot
 
-<img src="https://github.com/vmercadi/pyaxie-bot/blob/main/img/Pyaxie.png" alt="logo" width="200"/>
+<img src="https://github.com/vmercadi/pyaxie-bot/blob/master/img/Pyaxie.png" alt="logo" width="200"/>
 
 ## Description
 
