@@ -31,7 +31,7 @@ With this command, you'll not have to write the config in secret.yaml again
 `$axies 506011891353903121` = Send axies list of given discord ID  
 `$profile` = Send link to the axie account of user  
 `$profile 506011891353903121` = Send link to the axie account of the specified user  
-`$self_payout 0xScholar_Personal_Address` = Allow scholar to claim and payout to the personal address they give. (NOT FULLY TESTED YET)
+`$self_payout 0xScholar_Personal_Address` = Allow scholar to claim and payout to the personal address they give. (NOT FULLY TESTED YET)  
 
 **Commands for manager :**
 
@@ -40,7 +40,7 @@ With this command, you'll not have to write the config in secret.yaml again
 `$all_mmr` = Send scholar list sorted by MMR  
 `$all_rank` = Send scholar list sorted by rank  
 `$all_axies`= Send list of all the axies in the scholarship   
-`$all_profiles`= Send list of all the scholars profiles
+`$all_profiles`= Send list of all the scholars profiles  
 `$payout` = Split SLP and send the available SLP to manager and scholars  
 `$payout me` = Send all scholarship SLP directly to manager account with no split  
 `$transfer 0xfrom_address 0xto_addres amount` = Transfer SLP  
