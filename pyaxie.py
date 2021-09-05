@@ -7,14 +7,11 @@ import datetime
 import time
 import math
 import pyaxie_utils
-import sys
 
 from datetime import timedelta, date
 from web3 import Web3
 from web3.auto import w3
 from eth_account.messages import encode_defunct
-from collections import namedtuple
-from quickchart import QuickChart
 from pprint import pprint
 
 
@@ -703,6 +700,7 @@ class pyaxie(object):
 		Create a chart in /img with SLP burned/minted
 		:return: path of the image
 		"""
+		"""
 		try:
 			slp_supply = json.loads(requests.get("https://www.axieworld.com/api/charts/slp-issuance").content)
 			dates, mints, burns = ([],) * 3
@@ -760,7 +758,8 @@ class pyaxie(object):
 		except ValueError as e:
 			return e
 		return path
-
+		"""
+		return
 
 
 
