@@ -292,6 +292,14 @@ class pyaxie(object):
 			return e
 		return json_data['data']['axie']['image']
 
+	def get_number_of_axies(self):
+		"""
+		Get the number of axies in the account
+		:return: the number of axies
+		"""
+		axies = self.get_axie_list()
+		return len(axies)
+
 	def download_axie_image(self, axie_id):
 		"""
 		Download the image of an axie and return the path
@@ -486,7 +494,7 @@ class pyaxie(object):
 	def axie_link(self, axie_id):
 		"""
 		Return an URL to the axie page
-		:param axie_id: String of the axie ID
+		:param axie_id: Id of the axie
 		:return: URL of the axie
 		"""
 		url = 'https://marketplace.axieinfinity.com/axie/'
@@ -558,7 +566,13 @@ class pyaxie(object):
 			balance = result['blockchain_related']['balance']
 		else:
 			return balance
-		return int(result["total"] - balance)
+		if balance is None:
+			balance = 0
+
+		res = result["total"]
+		if res is None:
+			res = 0
+		return int(res - balance)
 
 	def get_last_claim(self, address=''):
 		"""

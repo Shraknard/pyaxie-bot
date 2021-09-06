@@ -8,7 +8,6 @@ import requests
 
 from datetime import datetime
 from pyaxie import pyaxie
-import pyaxie_utils
 from datetime import timedelta
 from pprint import pprint
 
@@ -124,13 +123,11 @@ async def on_message(message):
         await message.channel.send("\n\n------------------------------------------------\n" +
                                     "\n**Commands for everybody :**\n" +
                                     "\n`$infos` = Send all the infos about your account  " +
-                                    "\n`$infos 266011891353903121` = Send infos for the given discord ID  " +
                                     "\n`$qr` = Send your QR code  " +
                                     "\n`$mmr` = Send your current MMR  " +
                                     "\n`$rank` = Send your current rank" +
                                     "\n`$axies` = Send the list of axies of your account" +
                                     "\n`$axies 506011891353903121` = Send axies list of given discord ID" +
-                                    "\n`$self_payout 0xScholar_Personal_Address` = Allow scholar to claim and payout to the personal address they give. (NOT FULLY TESTED YET) " +
                                     "\n\n**Commands for manager :**\n" +
                                     "\n`$claim 506011891353903121` = Claim for the given discord ID (Manager only)  " +
                                     "\n`$all_claim` = Claim for all the scholars (Manager only)  " +
@@ -216,7 +213,8 @@ async def on_message(message):
         try:
             imgline = scholar.get_axies_imageline()
             await message.channel.send("\n\n------------------------------------------------\n" +
-                "Here are the infos for **" + scholar.name + "** account [**" + scholar.ronin_address + "**] :\n---\n" +
+                "Here are the infos for **" + scholar.name + "** account [**" + scholar.ronin_address + "**] \n" +
+                "NB of axies : **" + str(scholar.get_number_of_axies()) + "**\n---\n" +
                 "Claim status : {}\n".format(create_info_message(scholar).replace("\n", "", 1)) +
                 "MMR : **{}** 🥇\n".format(rank_mmr['mmr']) +
                 "Rank : **{}** 🎖️".format(rank_mmr['rank']), file=discord.File(imgline))
@@ -574,9 +572,32 @@ async def on_message(message):
                 await message.channel.send("Error renaming axie : **" + str(id) + "** to : **" + name + "**")
                 return
 
+        ################################################
+        # Get all the ronin_address in the scholarship #
+        ################################################
+
+        if message.content == "$all_address":
+            l = list()
+            i = 0
+            await message.channel.send("\n Here is the list of address :\n")
+            l.append('You : ' + config['personal']['ronin_address'])
+            for scholar in config['scholars']:
+                l.append(scholar + " : " + config['scholars'][scholar]['ronin_address'])
+                if i == 20:
+                    await message.channel.send('\n'.join(l))
+                    l = list()
+                    i = 0
+                i += 1
+            if len(l) > 0:
+                await message.channel.send('\n'.join(l))
+            return
+
+        ################################################
+        # Rename an account                            #
+        ################################################
+
         if "$rename_account " in message.content:
             await message.channel.send("This functionality is under construction")
-            return
             """
             try:
                 id = message.content.split(" ")[1]
@@ -600,6 +621,7 @@ async def on_message(message):
             await message.channel.send("Successfully renamed the account of  from : **" + old_name + "** to : **" + name + "**")
             return
             """
+            return
 
 # Loads secret.yaml datas
 with open("secret.yaml", "r") as file:
