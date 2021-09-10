@@ -40,6 +40,7 @@ class pyaxie(object):
 		self.axie_list_path = config['paths']['axie_list_path']
 		self.slp_track_path = config['paths']['slp_track_path']
 		self.slp_abi_path = 'slp_abi.json'
+		self.axie_abi_path = 'slp_abi.json'
 		self.slp_contract = self.get_slp_contract(self.ronin_web3, self.slp_abi_path)
 		self.name = "you"
 
@@ -237,14 +238,17 @@ class pyaxie(object):
 			ronin_address = self.ronin_address
 		params = {"client_id": ronin_address, "offset": 0, "limit": 0}
 
-		try:
-			r = requests.get(self.url_api + "last-season-leaderboard", params=params)
-			json_data = json.loads(r.text)
-			if not json_data['success']:
-				return {'mmr': 0, 'rank': 0}
-		except ValueError as e:
-			return e
-		return {'mmr': int(json_data['items'][1]['elo']), 'rank': int(json_data['items'][1]['rank'])}
+		# Try multiple times to avoid return 0
+		for i in range(0, 5):
+			try:
+				r = requests.get(self.url_api + "last-season-leaderboard", params=params)
+				json_data = json.loads(r.text)
+				if json_data['success']:
+					return {'mmr': int(json_data['items'][1]['elo']), 'rank': int(json_data['items'][1]['rank'])}
+			except ValueError as e:
+				return e
+		return {'mmr': 0, 'rank': 0}
+
 
 	def get_daily_slp(self):
 		"""
@@ -526,6 +530,18 @@ class pyaxie(object):
 		contract = ronin_web3.eth.contract(address=w3.toChecksumAddress(slp_contract_address), abi=slp_abi)
 		self.slp_contract = contract
 		return contract
+
+	def get_axie_contract(self, ronin_web3, axie_abi_path):
+		slp_contract_address = "0x32950db2a7164ae833121501c797d79e7b79d74c"
+		with open(slp_abi_path) as f:
+			try:
+				slp_abi = json.load(f)
+			except ValueError as e:
+				return e
+		contract = ronin_web3.eth.contract(address=w3.toChecksumAddress(slp_contract_address), abi=slp_abi)
+		self.slp_contract = contract
+		return contract
+
 
 	def get_claimed_slp(self, address=''):
 		"""

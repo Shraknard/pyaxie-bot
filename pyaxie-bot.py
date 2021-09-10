@@ -6,13 +6,14 @@ import time
 import json
 import requests
 
+from web3 import Web3
 from datetime import datetime
 from pyaxie import pyaxie
 from datetime import timedelta
 from pprint import pprint
 
 now = datetime.now()
-client = discord.Client()
+client = discord.Client(intents=discord.Intents.all())
 current_time = now.strftime("%d/%m/%Y %H:%M:%S")
 
 
@@ -120,8 +121,7 @@ async def on_message(message):
     # Send the list of commands  #
     ##############################
     if message.content == "$help":
-        await message.channel.send("\n\n------------------------------------------------\n" +
-                                    "\n**Commands for everybody :**\n" +
+        await message.channel.send("\n\n**Commands for everybody :**\n" +
                                     "\n`$infos` = Send all the infos about your account  " +
                                     "\n`$qr` = Send your QR code  " +
                                     "\n`$mmr` = Send your current MMR  " +
@@ -145,8 +145,7 @@ async def on_message(message):
         print("\nGet QR code for : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         try:
             qr_path = scholar.get_qr_code()
-            await message.author.send("\n\n------------------------------------------------\n" +
-                "\nHello " + message.author.name + " ! 😃 \nHere is your new QR Code to login : ")
+            await message.author.send("\nHello " + message.author.name + " ! 😃 \nHere is your new QR Code to login : ")
             await message.author.send(file=discord.File(qr_path))
             os.remove(qr_path)
         except ValueError as e:
@@ -162,8 +161,7 @@ async def on_message(message):
             return
         print("\nGet MMR for : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         try:
-            await message.channel.send("\n\n------------------------------------------------\n" +
-                "Hello " + message.author.name + " !\n"
+            await message.channel.send("\nHello " + message.author.name + " !\n"
                 "Your MMR is : {} 🥇".format(scholar.get_rank_mmr()['mmr']))
         except ValueError as e:
             await message.channel.send("Error getting MMR : " + str(e))
@@ -178,8 +176,7 @@ async def on_message(message):
             return
         print("\nGet rank for : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         try:
-            await message.channel.send("\n\n------------------------------------------------\n" +
-                "Hello " + message.author.name + " !\n"
+            await message.channel.send("\nHello " + message.author.name + " !\n"
                 "Your rank is : {} 🎖️".format(scholar.get_rank_mmr()['rank']))
         except ValueError as e:
             await message.channel.send("Error getting rank : " + str(e))
@@ -212,8 +209,7 @@ async def on_message(message):
         print("\nGet infos for : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         try:
             imgline = scholar.get_axies_imageline()
-            await message.channel.send("\n\n------------------------------------------------\n" +
-                "Here are the infos for **" + scholar.name + "** account [**" + scholar.ronin_address + "**] \n" +
+            await message.channel.send("\nHere are the infos for **" + scholar.name + "** account [**" + scholar.ronin_address + "**] \n" +
                 "NB of axies : **" + str(scholar.get_number_of_axies()) + "**\n---\n" +
                 "Claim status : {}\n".format(create_info_message(scholar).replace("\n", "", 1)) +
                 "MMR : **{}** 🥇\n".format(rank_mmr['mmr']) +
@@ -222,59 +218,39 @@ async def on_message(message):
             await message.channel.send("Error getting infos : " + str(e))
         return
 
-    ##############################
-    # Get rank for all scholars  #
-    ##############################
-    if message.content == "$all_rank":
+    ###################################
+    # Get MMR/rank for all scholars   #
+    ###################################
+    if "$all_mmr" in message.content or "$all_rank" in message.content:
         if config['url_api'] == '':
             await message.channel.send("No api_url set in secret.yaml. You have to FIND and add it by yourself as it is private and I can't make it public.")
             return
         if message.author.id != config['personal']['discord_id']:
             await message.channel.send("This command is only available for manager")
             return
-        print("\nGet all rank, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
-        await message.channel.send("\n\n------------------------------------------------\n" +
-            "🎖️ Getting rank for all scholars, this can take some time...")
+        print("\nGet all MMR/RANK, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
+        await message.channel.send("🥇 Getting MMR/RANK for all scholars, this can take some time...")
         try:
+            rm = message.content.split('_')[1]
+            rm = rm.split(' ')[0] if ' ' in rm else rm
             l = list()
             msg = ""
             for account in config['scholars']:
                 rank_mmr = scholar.get_rank_mmr(config['scholars'][account]['ronin_address'])
-                rank_mmr['name'] = str(account)
+                rank_mmr['name'] = str(client.get_user(config['scholars'][account]['discord_id'])).split('#', -1)[0]
                 l.append(rank_mmr)
 
-            ranks = sorted(l, key=lambda k: k['rank'])
-            for r in ranks:
-                msg += "\n**{}** | {}".format(r['rank'], r['name'])
-        except ValueError as e:
-            await message.channel.send("Error getting ranks : " + str(e))
-            return
-        await message.channel.send(msg)
-        return
-
-    ##############################
-    # Get MMR for all scholars   #
-    ##############################
-    if message.content == "$all_mmr":
-        if config['url_api'] == '':
-            await message.channel.send("No api_url set in secret.yaml. You have to FIND and add it by yourself as it is private and I can't make it public.")
-            return
-        if message.author.id != config['personal']['discord_id']:
-            await message.channel.send("This command is only available for manager")
-            return
-        print("\nGet all MMR, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
-        await message.channel.send("🥇 Getting MMR for all scholars, this can take some time...")
-        try:
-            l = list()
-            msg = ""
-            for account in config['scholars']:
-                rank_mmr = scholar.get_rank_mmr(config['scholars'][account]['ronin_address'])
-                rank_mmr['name'] = str(account)
-                l.append(rank_mmr)
-
-            mmrs = reversed(sorted(l, key=lambda k: k['mmr']))
+            mmrs = reversed(sorted(l, key=lambda k: k[rm]))
+            nb = message.content.split(' ')[1] if ' ' in message.content else 99999
+            if nb != 99999 and nb.isdigit():
+                nb = int(nb)
+            i = 1
             for m in mmrs:
-                msg += "\n**{}** | {}".format(m['mmr'], m['name'])
+                if i > nb:
+                    break
+                msg += "\nTop [**{}**] : **{}** | {}".format(i, m[rm], m['name'])
+                i += 1
+
         except ValueError as e:
             await message.channel.send("Error getting MMRs : " + str(e))
             return
@@ -319,7 +295,7 @@ async def on_message(message):
             await message.channel.send("This command is only available for manager")
             return
 
-        await message.channel.send("\n------------------------------------------------\nClaiming for all scholars... This can take some time.\n")
+        await message.channel.send("\nClaiming for all scholars... This can take some time.\n")
 
         try:
             l = list()
@@ -341,16 +317,16 @@ async def on_message(message):
     ##############################
     if "payout" in message.content:
         print("\nPayout, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
-        await message.channel.send("\n------------------------------------------------\nPayout for all scholar ! This can take some time.\n")
-
         # Self payout for scholars
-        if "$self_payout " in message.content:
-            to_address = message.content.split(' ')[1].replace('ronin:', '0x')
-            scholar = get_account_from_id(message.author.id)
+        if "$self_payout" in message.content:
+            if not ' ' in message.content:
+                to_address = scholar.personal_ronin
+            else:
+                to_address = message.content.split(' ')[1].replace('ronin:', '0x')
+                if not Web3.isAddress(to_address):
+                    await message.channel.send("\nError in the address, make sure you try to send to the right one.\n")
+                    return
 
-            if scholar is None:
-                await message.channel.send("Author is not part of the scholarship.")
-                return
             if to_address == scholar.ronin_address:
                 await message.channel.send("Your from_address and to_address are the same.")
                 return
@@ -366,6 +342,7 @@ async def on_message(message):
 
         # Payout for all scholars
         if message.content == "$payout":
+            await message.channel.send("\nPayout for all scholar ! This can take some time.\n")
             if message.author.id != config['personal']['discord_id']:
                 await message.channel.send("This command is only available for manager")
                 return
