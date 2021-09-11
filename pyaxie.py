@@ -687,7 +687,7 @@ class pyaxie(object):
 		txn = self.ronin_web3.toHex(self.ronin_web3.keccak(signed_txn.rawTransaction))
 		return txn if self.wait_confirmation(txn) else "Error : Transaction " + str(txn) + "reverted by EVM (Ethereum Virtual machine)"
 
-	def wait_confirmation(self, txn):
+	async def wait_confirmation(self, txn):
 		"""
 		Wait for a transaction to finish
 		:param txn: the transaction to wait
