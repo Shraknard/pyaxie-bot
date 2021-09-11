@@ -7,9 +7,10 @@ import datetime
 import time
 import math
 import pyaxie_utils
+import asyncio
 
 from datetime import timedelta, date
-from web3 import Web3
+from web3 import Web3, exceptions
 from web3.auto import w3
 from eth_account.messages import encode_defunct
 from pprint import pprint
@@ -282,6 +283,21 @@ class pyaxie(object):
 			return e
 		return json_data['data']['axies']['results']
 
+	def get_all_axie_list(self):
+		"""
+		Get informations about the axies in all the accounts
+		:return: All axies datas
+		"""
+		res = list()
+		for account in self.config['scholars']:
+			axies = self.get_axie_list(self.config['scholars'][account]['ronin_address'])
+			for axie in axies:
+				res.append(axie)
+		for axie in self.get_axie_list(self.config['personal']['ronin_address']):
+			res.append(axie)
+		return res
+
+
 	def get_axie_image(self, axie_id):
 		"""
 		Get the image link to an axie
@@ -341,6 +357,7 @@ class pyaxie(object):
 			return e
 		return pyaxie_utils.merge_images(l[0], l[1], l[2], self.name)
 
+
 	def get_axie_detail(self, axie_id):
 		"""
 		Get informations about an Axie based on its ID
@@ -354,6 +371,7 @@ class pyaxie(object):
 		except ValueError as e:
 			return e
 		return json_data['data']['axie']
+
 
 	def get_axie_name(self, axie_id):
 		"""
@@ -533,7 +551,7 @@ class pyaxie(object):
 
 	def get_axie_contract(self, ronin_web3, axie_abi_path):
 		slp_contract_address = "0x32950db2a7164ae833121501c797d79e7b79d74c"
-		with open(slp_abi_path) as f:
+		with open(self.axie_abi_path) as f:
 			try:
 				slp_abi = json.load(f)
 			except ValueError as e:
@@ -640,12 +658,11 @@ class pyaxie(object):
 		slp_claim['state']["signature"] = result["signature"].replace("0x", "")
 		claim_txn = self.slp_contract.functions.checkpoint(checksum_address, result["amount"], result["timestamp"],
 						slp_claim['state']["signature"]).buildTransaction({'gas': 1000000, 'gasPrice': 0, 'nonce': nonce})
-		signed_txn = self.ronin_web3.eth.account.sign_transaction(claim_txn, private_key=bytearray.fromhex(
-			self.private_key.replace("0x", "")))
+		signed_txn = self.ronin_web3.eth.account.sign_transaction(claim_txn, private_key=bytearray.fromhex(self.private_key.replace("0x", "")))
 
 		self.ronin_web3.eth.send_raw_transaction(signed_txn.rawTransaction)
-		time.sleep(10)
-		return self.ronin_web3.toHex(self.ronin_web3.keccak(signed_txn.rawTransaction))
+		txn = self.ronin_web3.toHex(self.ronin_web3.keccak(signed_txn.rawTransaction))
+		return txn if self.wait_confirmation(txn) else "Error : Transaction " + str(txn) + "reverted by EVM (Ethereum Virtual machine)"
 
 	def transfer_slp(self, to_address, amount):
 		"""
@@ -665,64 +682,54 @@ class pyaxie(object):
 		})
 		private_key = bytearray.fromhex(self.private_key.replace("0x", ""))
 		signed_txn = self.ronin_web3.eth.account.sign_transaction(transfer_txn, private_key=private_key)
+
 		self.ronin_web3.eth.send_raw_transaction(signed_txn.rawTransaction)
-		time.sleep(15)
-		return self.ronin_web3.toHex(self.ronin_web3.keccak(signed_txn.rawTransaction))
+		txn = self.ronin_web3.toHex(self.ronin_web3.keccak(signed_txn.rawTransaction))
+		return txn if self.wait_confirmation(txn) else "Error : Transaction " + str(txn) + "reverted by EVM (Ethereum Virtual machine)"
+
+	def wait_confirmation(self, txn):
+		"""
+		Wait for a transaction to finish
+		:param txn: the transaction to wait
+		:return: True or False depending if transaction succeed
+		"""
+		while True:
+			try:
+				recepit = self.ronin_web3.eth.get_transaction_receipt(txn)
+				if recepit["status"] == 1:
+					success = True
+				else:
+					success = False
+				break
+			except exceptions.TransactionNotFound:
+				await asyncio.sleep(5)
+		return success
 
 	def payout(self):
 		"""
 		Send money to the scholar and to the manager/academy or directly to manager if manager called
 		:return: List of 2 transactions hash : scholar and manager
 		"""
-		if self.get_unclaimed_slp() <= 1:
-			return 'Nothing to claim for ' + self.name
-
-		claim = self.claim_slp()
-		if 'Error: Too soon' in claim:
-			return claim
-		while not '0x' in claim:
-			pprint(self.claim_slp())
-			time.sleep(5)
+		self.wait_confirmation(self.claim_slp())
 
 		txns = list()
-		slp_balance = self.get_claimed_slp(self.ronin_address)
+		slp_balance = self.get_claimed_slp()
 		scholar_payout_amount = math.ceil(slp_balance * self.payout_percentage)
 		academy_payout_amount = slp_balance - scholar_payout_amount
 
 		if slp_balance < 1:
-			return "Error: Nothing to send for."
+			return "Error: Nothing to send."
 
 		if self.payout_percentage == 0:
 			print("Sending all the {} SLP to you : {} ".format(academy_payout_amount, self.config['personal']['ronin_address']))
-			ok = False
-			while not ok:
-				try:
-					txns.append(str(self.transfer_slp(self.config['personal']['ronin_address'], academy_payout_amount + scholar_payout_amount)))
-				except ValueError as e:
-					return e
-				ok = True
+			txns.append(str(self.transfer_slp(self.config['personal']['ronin_address'], academy_payout_amount + scholar_payout_amount)))
 			return txns
 		else:
 			print("Sending {} SLP to {} : {} ".format(academy_payout_amount, "You", self.config['personal']['ronin_address']))
-			ok = False
-			while not ok:
-				try:
-					txns.append(str(self.transfer_slp(self.config['personal']['ronin_address'], academy_payout_amount)))
-					time.sleep(10)
-				except ValueError as e:
-					if not "-32000" in e:
-						return e
-				ok = True
+			txns.append(str(self.transfer_slp(self.config['personal']['ronin_address'], academy_payout_amount)))
 
 			print("Sending {} SLP to {} : {} ".format(scholar_payout_amount, self.name, self.personal_ronin))
-			ok = False
-			while not ok:
-				try:
-					txns.append(str(self.transfer_slp(self.personal_ronin, scholar_payout_amount)))
-				except ValueError as e:
-					if not "-32000" in e:
-						return e
-				ok = True
+			txns.append(str(self.transfer_slp(self.personal_ronin, scholar_payout_amount)))
 		return txns
 
 	def get_mint_burn_graph(self):

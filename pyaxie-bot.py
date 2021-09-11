@@ -66,6 +66,7 @@ def get_account_from_id(id):
         for sch in config['scholars']:
             if config['scholars'][sch]['discord_id'] == id:
                 scholar = pyaxie(config['scholars'][sch]['ronin_address'], config['scholars'][sch]['private_key'])
+                scholar.name = str(client.get_user(config['scholars'][sch]['discord_id'])).split('#', -1)[0]
                 break
     return scholar
 
@@ -83,6 +84,7 @@ def get_account_from_ronin(ronin_address):
         for sch in config['scholars']:
             if config['scholars'][sch]['ronin_address'] == ronin_address:
                 scholar = pyaxie(config['scholars'][sch]['ronin_address'], config['scholars'][sch]['private_key'])
+                scholar.name = str(client.get_user(config['scholars'][sch]['discord_id'])).split('#', -1)[0]
                 break
     return scholar
 
@@ -113,9 +115,8 @@ async def on_message(message):
 
         scholar = get_account_from_id(message.author.id)
         if scholar is None:
-            await message.channel.send("You are not part of the scholarship. Check with your manager to be added to the bot.")
             print("\nNon scholar tried to use the bot : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
-            return
+            return await message.channel.send("You are not part of the scholarship. Check with your manager to be added to the bot.")
 
     ##############################
     # Send the list of commands  #
@@ -157,8 +158,8 @@ async def on_message(message):
     ##############################
     if message.content == "$mmr":
         if config['url_api'] == '':
-            await message.channel.send("No api_url set in secret.yaml. You have to FIND and add it by yourself as it is private and I can't make it public.")
-            return
+            return await message.channel.send("No api_url set in secret.yaml. You have to FIND and add it by yourself as it is private and I can't make it public.")
+
         print("\nGet MMR for : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         try:
             await message.channel.send("\nHello " + message.author.name + " !\n"
@@ -172,8 +173,8 @@ async def on_message(message):
     ##############################
     if message.content == "$rank":
         if config['url_api'] == '':
-            await message.channel.send("No api_url set in secret.yaml. You have to FIND and add it by yourself as it is private and I can't make it public.")
-            return
+            return await message.channel.send("No api_url set in secret.yaml. You have to FIND and add it by yourself as it is private and I can't make it public.")
+
         print("\nGet rank for : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         try:
             await message.channel.send("\nHello " + message.author.name + " !\n"
@@ -187,23 +188,20 @@ async def on_message(message):
     ##################################
     if "$infos" in message.content:
         if config['url_api'] == '':
-            await message.channel.send("No api_url set in secret.yaml. You have to FIND and add it by yourself as it is private and I can't make it public.")
-            return
+            return await message.channel.send("No api_url set in secret.yaml. You have to FIND and add it by yourself as it is private and I can't make it public.")
         if "$infos " in message.content:
             try:
                 id = message.content.split(" ")[1]
                 if id.isnumeric():
                     scholar = get_account_from_id(id)
                 else:
-                    await message.channel.send("Error in ID. Example: $infos 496061891353903121")
-                    return
+                    return await message.channel.send("Error in ID. Example: $infos 496061891353903121")
             except ValueError as e:
                 await message.channel.send("Error : " + str(e))
                 return e
 
         if scholar is None:
-            await message.channel.send("Error: No scholar found with this ID")
-            return
+            return await message.channel.send("Error: No scholar found with this ID")
 
         rank_mmr = scholar.get_rank_mmr()
         print("\nGet infos for : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
@@ -223,11 +221,10 @@ async def on_message(message):
     ###################################
     if "$all_mmr" in message.content or "$all_rank" in message.content:
         if config['url_api'] == '':
-            await message.channel.send("No api_url set in secret.yaml. You have to FIND and add it by yourself as it is private and I can't make it public.")
-            return
+            return await message.channel.send("No api_url set in secret.yaml. You have to FIND and add it by yourself as it is private and I can't make it public.")
         if message.author.id != config['personal']['discord_id']:
-            await message.channel.send("This command is only available for manager")
-            return
+            return await message.channel.send("This command is only available for manager")
+
         print("\nGet all MMR/RANK, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         await message.channel.send("🥇 Getting MMR/RANK for all scholars, this can take some time...")
         try:
@@ -252,30 +249,26 @@ async def on_message(message):
                 i += 1
 
         except ValueError as e:
-            await message.channel.send("Error getting MMRs : " + str(e))
-            return
-        await message.channel.send(msg)
-        return
+            return await message.channel.send("Error getting MMRs : " + str(e))
+        return await message.channel.send(msg)
+
 
     ##################################
     # Claim for the current scholars #
     ##################################
     if "$claim" in message.content:
         if config['url_api'] == '':
-            await message.channel.send("No api_url set in secret.yaml. You have to FIND and add it by yourself as it is private and I can't make it public.")
-            return
+            return await message.channel.send("No api_url set in secret.yaml. You have to FIND and add it by yourself as it is private and I can't make it public.")
         print("\nClaim, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         try:
             if message.content == "$claim":
-                await message.channel.send("You have to specify the discord ID of the scholar you want to claim for.\n" +
+                return await message.channel.send("You have to specify the discord ID of the scholar you want to claim for.\n" +
                                            "Example: `$claim 506011891353903121`")
-                return
 
             to_id = message.content.split(' ')[1]
             scholar = get_account_from_id(to_id)
             if scholar is None:
-                await message.channel.send("The Discord ID you specified is not in the scholarship.\n")
-                return
+                return await message.channel.send("The Discord ID you specified is not in the scholarship.\n")
 
             amount = scholar.get_unclaimed_slp()
             if amount > 0:
@@ -292,8 +285,8 @@ async def on_message(message):
     if message.content == "$all_claim":
         print("\nAll claim, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         if message.author.id != config['personal']['discord_id']:
-            await message.channel.send("This command is only available for manager")
-            return
+            return await message.channel.send("This command is only available for manager")
+
 
         await message.channel.send("\nClaiming for all scholars... This can take some time.\n")
 
@@ -306,11 +299,9 @@ async def on_message(message):
                     l.append("**No SLP to claim for {} at this moment** \n".format(scholar.name))
                 else:
                     l.append("**{} SLP claimed for {} !** Transaction hash : {} \n".format(amount, scholar.name, str(scholar.claim_slp())))
-
-            await message.channel.send("--------\n".join(l))
         except ValueError as e:
-            await message.channel.send("Error getting QR code : " + str(e))
-        return
+            return await message.channel.send("Error getting QR code : " + str(e))
+        return await message.channel.send("--------\n".join(l))
 
     ##############################
     # Payout for all scholars    #
@@ -324,28 +315,20 @@ async def on_message(message):
             else:
                 to_address = message.content.split(' ')[1].replace('ronin:', '0x')
                 if not Web3.isAddress(to_address):
-                    await message.channel.send("\nError in the address, make sure you try to send to the right one.\n")
-                    return
+                    return await message.channel.send("\nError in the address, make sure you try to send to the right one.\n")
 
             if to_address == scholar.ronin_address:
-                await message.channel.send("Your from_address and to_address are the same.")
-                return
+                return await message.channel.send("Your from_address and to_address are the same.")
 
             unclaimed = scholar.get_unclaimed_slp()
             tx = scholar.payout().lower()
-            if "error" in tx:
-                await message.channel.send("Error while trying to payout : {}".format(tx))
-                return
-            else:
-                await message.channel.send("Successfully sent **{} SLP** from : **{}** to **{}**".format(unclaimed, scholar.ronin_address, to_address))
-                return
+            return await message.channel.send("Successfully sent **{} SLP** from : **{}** to **{}**. Txn hash : **{}**".format(unclaimed, scholar.ronin_address, to_address, tx))
 
         # Payout for all scholars
         if message.content == "$payout":
             await message.channel.send("\nPayout for all scholar ! This can take some time.\n")
             if message.author.id != config['personal']['discord_id']:
-                await message.channel.send("This command is only available for manager")
-                return
+                return await message.channel.send("This command is only available for manager")
             try:
                 for account in config['scholars']:
                     scholar = pyaxie(config['scholars'][account]['ronin_address'], config['scholars'][account]['private_key'])
@@ -381,20 +364,17 @@ async def on_message(message):
     if "$transfer" in message.content and " " in message.content:
         print("\nTransfer, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         if message.author.id != config['personal']['discord_id']:
-            await message.channel.send("This command is only available for manager")
-            return
+            return await message.channel.send("This command is only available for manager")
 
         cmd = message.content.split(' ')
         if ("0x" not in cmd[1] and not cmd[1].isnumeric()) or ("0x" not in cmd[2] and not cmd[2].isnumeric()) or not cmd[3].isnumeric():
-            await message.channel.send("Error in the command. Should look like this : $transfer 0xfrom_address 0xto_address 100")
-            return
+            return await message.channel.send("Error in the command. Should look like this : $transfer 0xfrom_address 0xto_address 100")
 
         try:
             scholar = get_account_from_id(cmd[1]) if cmd[0] == "$transfer_id" else get_account_from_ronin(cmd[1])
             scholar2 = get_account_from_id(cmd[2]) if cmd[0] == "$transfer_id" else get_account_from_ronin(cmd[2])
             if scholar is None:
-                await message.channel.send("The from address or discord ID that you specified is not in the scholarship.")
-                return
+                return await message.channel.send("The from address or discord ID that you specified is not in the scholarship.")
 
             if scholar2 is None and cmd[0] != "$transfer_id":
                 ronin_address = cmd[2]
@@ -424,15 +404,13 @@ async def on_message(message):
                 if id.isnumeric():
                     scholar = get_account_from_id(id)
                 else:
-                    await message.channel.send("Error in ID. Example: $axies 496061891353903121")
-                    return
+                    return await message.channel.send("Error in ID. Example: $axies 496061891353903121")
             except ValueError as e:
                 await message.channel.send("Error : " + str(e))
                 return e
 
         if scholar is None:
-            await message.channel.send("Error: No scholar found with this ID")
-            return
+            return await message.channel.send("Error: No scholar found with this ID")
 
         try:
             axies = scholar.get_axie_list()
@@ -497,9 +475,7 @@ async def on_message(message):
             return
 
         elif message.content == "$profile":
-            await message.channel.send("Here is the link for your profile **" + message.author.name +
-                                       "** : " + url + scholar.ronin_address.replace('0x', '') + "/axie")
-            return
+            return await message.channel.send("Here is the link for your profile **" + message.author.name + "** : " + url + scholar.ronin_address.replace('0x', '') + "/axie")
 
         elif " " in message.content:
             try:
@@ -507,14 +483,13 @@ async def on_message(message):
                 if id.isnumeric():
                     scholar = get_account_from_id(id)
                 else:
-                    await message.channel.send("Error in discord ID. Example: $profile 496061891353903121")
-                    return
+                    return await message.channel.send("Error in discord ID. Example: $profile 496061891353903121")
             except ValueError as e:
                 await message.channel.send("Error : " + str(e))
                 return e
+
             if scholar is None:
-                await message.channel.send("Error: No scholar found with this ID")
-                return
+                return await message.channel.send("Error: No scholar found with this ID")
             await message.channel.send("Here is the link for " + scholar.name + " profile : " + url + scholar.ronin_address.replace('0x', 'ronin:') + "/axie")
         return
 
@@ -532,22 +507,18 @@ async def on_message(message):
                     axie = scholar.get_axie_detail(id)
                     scholar = get_account_from_ronin(str(axie['owner']))
                 else:
-                    await message.channel.send("Error in axie ID. Example: $rename_axie 1391353 new_name")
-                    return
+                    return await message.channel.send("Error in axie ID. Example: $rename_axie 1391353 new_name")
 
                 name = message.content.split(" ")[2]
             except ValueError as e:
                 await message.channel.send("Error : " + str(e))
                 return e
             if scholar is None:
-                await message.channel.send("Error: No scholar found with this ID")
-                return
+                return await message.channel.send("Error: No scholar found with this ID")
             if scholar.rename_axie(id, name):
-                await message.channel.send("Axie name of " + str(id) + " changed to : **" + name + "**")
-                return
+                return await message.channel.send("Axie name of " + str(id) + " changed to : **" + name + "**")
             else:
-                await message.channel.send("Error renaming axie : **" + str(id) + "** to : **" + name + "**")
-                return
+                return await message.channel.send("Error renaming axie : **" + str(id) + "** to : **" + name + "**")
 
         ################################################
         # Get all the ronin_address in the scholarship #
