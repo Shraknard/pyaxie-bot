@@ -310,7 +310,7 @@ async def on_message(message):
         print("\nPayout, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         # Self payout for scholars
         if "$self_payout" in message.content:
-            await message.channel.send("\nSelf payout for + " + message.author.name + ". Please wait...\n")
+            await message.channel.send("\nSelf payout for **" + message.author.name + "**. Please wait...\n")
             if not ' ' in message.content:
                 to_address = scholar.personal_ronin
             else:
@@ -323,7 +323,9 @@ async def on_message(message):
 
             unclaimed = scholar.get_unclaimed_slp()
             tx = scholar.payout()
-            return await message.channel.send("Successfully sent **{} SLP** from : **{}** to **{}**. Txn hash : **{}**".format(unclaimed, scholar.ronin_address, to_address, tx))
+            msg = "Sent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTansaction : **{}**\n".format(unclaimed * (1 - scholar.payout_percentage), scholar.ronin_address, config['personal']['ronin_address'], tx[0])
+            msg += "-----\nSent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTansaction : **{}**\n".format(unclaimed * scholar.payout_percentage, scholar.ronin_address, to_address, tx[1])
+            return await message.channel.send(msg)
 
         # Payout for all scholars
         if message.content == "$payout":

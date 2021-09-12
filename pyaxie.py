@@ -671,8 +671,8 @@ class pyaxie(object):
 		:param amount: Amount of SLP to send
 		:return: Transaction hash
 		"""
-		if amount < 1 or len(to_address) < 20:
-			return {"error": "Make sure that the amount is not under 1 and a to_address is correctly set."}
+		if amount < 1 or not Web3.isAddress(to_address):
+			return {"error": "Make sure that the amount is not under 1 and the **to_address** is correct."}
 
 		transfer_txn = self.slp_contract.functions.transfer(w3.toChecksumAddress(to_address), amount).buildTransaction({
 			'chainId': 2020,
@@ -687,7 +687,7 @@ class pyaxie(object):
 		txn = self.ronin_web3.toHex(self.ronin_web3.keccak(signed_txn.rawTransaction))
 		return txn if self.wait_confirmation(txn) else "Error : Transaction " + str(txn) + "reverted by EVM (Ethereum Virtual machine)"
 
-	async def wait_confirmation(self, txn):
+	def wait_confirmation(self, txn):
 		"""
 		Wait for a transaction to finish
 		:param txn: the transaction to wait
@@ -696,13 +696,10 @@ class pyaxie(object):
 		while True:
 			try:
 				recepit = self.ronin_web3.eth.get_transaction_receipt(txn)
-				if recepit["status"] == 1:
-					success = True
-				else:
-					success = False
+				success = True if recepit["status"] == 1 else False
 				break
 			except exceptions.TransactionNotFound:
-				await asyncio.sleep(5)
+				time.sleep(5)
 		return success
 
 	def payout(self):
@@ -710,7 +707,7 @@ class pyaxie(object):
 		Send money to the scholar and to the manager/academy or directly to manager if manager called
 		:return: List of 2 transactions hash : scholar and manager
 		"""
-		self.wait_confirmation(self.claim_slp())
+		self.claim_slp()
 
 		txns = list()
 		slp_balance = self.get_claimed_slp()
