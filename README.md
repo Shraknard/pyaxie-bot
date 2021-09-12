@@ -31,7 +31,7 @@ With this command, you'll not have to write the config in secret.yaml again
 `$axies 506011891353903121` = Send axies list of given discord ID  
 `$profile` = Send link to the axie account of user  
 `$profile 506011891353903121` = Send link to the axie account of the specified user  
-`$self_payout` = Allow scholar to claim. Money is sent to their personal ronin and to you.
+`$self_payout` = Allow scholar to claim. Money is sent to their personal ronin and to you.  
 `$self_payout 0xScholar_Personal_Address` = Allow scholar to claim and payout to the personal address they give. (NOT FULLY TESTED YET)  
 
 **Commands for manager :**
