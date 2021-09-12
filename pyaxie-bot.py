@@ -321,8 +321,8 @@ async def on_message(message):
             if to_address == scholar.ronin_address:
                 return await message.channel.send("Your from_address and to_address are the same.")
 
-            claimed = scholar.get_claimed_slp()
             tx = scholar.payout()
+            claimed = scholar.get_claimed_slp()
             msg = "Sent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTansaction : https://explorer.roninchain.com/tx/{}\n".format(claimed * (1 - scholar.payout_percentage), scholar.ronin_address, config['personal']['ronin_address'], tx[0])
             msg += "-----\nSent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTansaction : https://explorer.roninchain.com/tx/{}\n".format(claimed * scholar.payout_percentage, scholar.ronin_address, to_address, tx[1])
             return await message.channel.send(msg)
