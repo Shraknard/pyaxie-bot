@@ -321,10 +321,10 @@ async def on_message(message):
             if to_address == scholar.ronin_address:
                 return await message.channel.send("Your from_address and to_address are the same.")
 
-            unclaimed = scholar.get_unclaimed_slp()
+            claimed = scholar.get_claimed_slp()
             tx = scholar.payout()
-            msg = "Sent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTansaction : **{}**\n".format(unclaimed * (1 - scholar.payout_percentage), scholar.ronin_address, config['personal']['ronin_address'], tx[0])
-            msg += "-----\nSent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTansaction : **{}**\n".format(unclaimed * scholar.payout_percentage, scholar.ronin_address, to_address, tx[1])
+            msg = "Sent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTansaction : https://explorer.roninchain.com/tx/{}\n".format(claimed * (1 - scholar.payout_percentage), scholar.ronin_address, config['personal']['ronin_address'], tx[0])
+            msg += "-----\nSent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTansaction : https://explorer.roninchain.com/tx/{}\n".format(claimed * scholar.payout_percentage, scholar.ronin_address, to_address, tx[1])
             return await message.channel.send(msg)
 
         # Payout for all scholars
@@ -341,21 +341,19 @@ async def on_message(message):
 
                     if datetime.utcnow() + timedelta(days=-14) < datetime.fromtimestamp(scholar.get_last_claim()) or unclaimed <= 0:
                         await message.channel.send("**No SLP to claim for {} at this moment** \n".format(scholar.name))
-                    else:
-                        await message.channel.send("**{} SLP claimed for {} !** Transaction hash : {} \n".format(unclaimed, scholar.name, str(scholar.claim_slp())))
 
                     if claimed <= 0:
                         await message.channel.send("**No SLP to send for {} account.**\n".format(scholar.name))
                     elif "me" in message.content:
                         tx = scholar.transfer_slp(config['personal']['ronin_address'], claimed)
-                        await message.channel.send("**All the {} SLP are sent to you !** Transaction hash : {} \n".format(claimed, str(tx)))
+                        await message.channel.send("**All the {} SLP are sent to you !**\n Transaction : https://explorer.roninchain.com/tx/{} \n".format(claimed, str(tx)))
                     else:
                         res = scholar.payout()
-                        await message.channel.send("**{} SLP sent to you and {} SLP to {} !**".format(claimed * (1-scholar.payout_percentage), claimed * scholar.payout_percentage, scholar.name) +
-                                                   "Transactions hash : {} \n".format(res))
+                        msg = "Sent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTansaction : https://explorer.roninchain.com/tx/{}\n".format(claimed * (1 - scholar.payout_percentage), scholar.ronin_address, config['personal']['ronin_address'], res[0])
+                        msg += "-----\nSent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTansaction : https://explorer.roninchain.com/tx/{}\n".format(claimed * scholar.payout_percentage, scholar.ronin_address, scholar.personal_ronin, res[1])
+                        await message.channel.send(msg)
 
                     await message.channel.send("\n-------------\n")
-
                 await message.channel.send("\n\n --- END OF PAYOUT ---")
             except ValueError as e:
                 await message.channel.send("Error while paying out : " + str(e))

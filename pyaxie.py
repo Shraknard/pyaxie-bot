@@ -715,7 +715,7 @@ class pyaxie(object):
 		academy_payout_amount = slp_balance - scholar_payout_amount
 
 		if slp_balance < 1:
-			return "Error: Nothing to send."
+			return {"Error: Nothing to send."}
 
 		if self.payout_percentage == 0:
 			print("Sending all the {} SLP to you : {} ".format(academy_payout_amount, self.config['personal']['ronin_address']))
