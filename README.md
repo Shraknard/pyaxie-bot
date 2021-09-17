@@ -20,31 +20,32 @@ With this command, you'll not have to write the config in secret.yaml again
 
 ## BOT commands
 
-**Commands for everybody :**
+"**Commands for everybody :**" 
 
-`$infos` = Send all the infos about your account  
-`$infos 506011891353903121` = Send infos for the given discord ID  
-`$qr` = Send your QR code  
-`$mmr` = Send your current MMR  
-`$rank` = Send your current rank  
-`$axies` = Send the list of axies of your account  
-`$axies 506011891353903121` = Send axies list of given discord ID  
-`$profile` = Send link to the axie account of user  
-`$profile 506011891353903121` = Send link to the axie account of the specified user  
-`$self_payout` = Allow scholar to claim. Money is sent to their personal ronin and to you.  
-`$self_payout 0xScholar_Personal_Address` = Allow scholar to claim and payout to the personal address they give. (NOT FULLY TESTED YET)  
+"`$infos` = Send all the infos about your account  "  
+"`$qr` = Send your QR code  "  
+"`$mmr` = Send your current MMR  "  
+"`$rank` = Send your current rank"  
+"`$axies` = Send the list of axies of your account"  
+"`$axies 506011891353903121` = Send axies list of given discord ID"  
+"`$profile` = Send the link of your Axie Infinity profile"  
+"`$all_profile` = Send a link of every Axie account in the scholarship"  
+"`$self_payout` = To claim and payout for yourself. Send to the personal address you gave to your manager."  
 
-**Commands for manager :**
+"**Commands for manager :**"  
 
-`$claim 506011891353903121` = Claim for the given discord ID   
-`$all_claim` = Claim for all the scholars   
-`$all_mmr` = Send scholar list sorted by MMR  
-`$all_rank` = Send scholar list sorted by rank  
-`$all_axies`= Send list of all the axies in the scholarship   
-`$all_profiles`= Send list of all the scholars profiles  
-`$payout` = Split SLP and send the available SLP to manager and scholars  
-`$payout me` = Send all scholarship SLP directly to manager account with no split  
-`$transfer 0xfrom_address 0xto_addres amount` = Transfer SLP  
+"`$claim 506011891353903121` = Claim for the given discord ID (Manager only)  "  
+"`$all_claim` = Claim for all the scholars (Manager only)  "  
+"`$all_mmr` = Send scholar list sorted by MMR  "  
+"`$all_rank` = Send scholar list sorted by rank  "  
+"`$payout` = Send the available SLP to manager and scholars  "  
+"`$payout me` = Send all scholarship SLP directly to manager account with no split"  
+"`$transfer 0xfrom_address 0xto_address amount` = Transfer amount SLP from from_address to to_address"  
+"`$breed_infos` = How much does it cost to breed now. You can also specify a breed lvl (0-6)"  
+"`$breed_cost 123456` = How much did you spent breeding an axie. (take AXS/SLP prices from time of breed)"  
+"`$account_balance ronin_address` = Balance of specified account"  
+"`$all_account_balance` = Balance of all the accounts in the scholarship"  
+"`$all_address` = Get all the addresses in the scholarship"  
 
 ## Donation
 
