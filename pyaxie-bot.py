@@ -130,6 +130,10 @@ async def on_message(message):
                                     "\n`$rank` = Send your current rank" +
                                     "\n`$axies` = Send the list of axies of your account" +
                                     "\n`$axies 506011891353903121` = Send axies list of given discord ID" +
+                                    "\n`$profile` = Send the link of your Axie Infinity profile" +
+                                    "\n`$all_profile` = Send a link of every Axie account in the scholarship" +
+                                    "\n`$self_payout` = To claim and payout for yourself. Send to the personal address you gave to your manager." +
+
                                     "\n\n**Commands for manager :**\n" +
                                     "\n`$claim 506011891353903121` = Claim for the given discord ID (Manager only)  " +
                                     "\n`$all_claim` = Claim for all the scholars (Manager only)  " +
@@ -139,7 +143,11 @@ async def on_message(message):
                                     "\n`$payout me` = Send all scholarship SLP directly to manager account with no split" +
                                     "\n`$transfer 0xfrom_address 0xto_address amount` = Transfer amount SLP from from_address to to_address" +
                                     "\n`$breed_infos` = How much does it cost to breed now. You can also specify a breed lvl (0-6)" +
-                                    "\n`$breed_cost 123456` = How much did you spent breeding an axie. (take AXS/SLP prices from time of breed)")
+                                    "\n`$breed_cost 123456` = How much did you spent breeding an axie. (take AXS/SLP prices from time of breed)" +
+                                    "\n`$account_balance ronin_address` = Balance of specified account" +
+                                    "\n`$all_account_balance` = Balance of all the accounts in the scholarship" +
+                                    "\n`$all_address` = Get all the addresses in the scholarship")
+
 
         return
 
@@ -479,10 +487,12 @@ async def on_message(message):
         return
 
     ################################################
-    # Breed cost                                   #
+    # Breed prices infos                           #
     ################################################
     if "$breed_infos" in message.content:
         print("\nBreed_infos, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
+        if message.author.id != config['personal']['discord_id']:
+            return await message.channel.send("This command is only available for manager")
         costs = scholar.get_breed_cost()
         if " " in message.content:
             nb = message.content.split(" ")[1]
@@ -506,10 +516,12 @@ async def on_message(message):
             return await message.channel.send("Breeding cost for all breed levels :\n\n" + '\n-----\n'.join(msg))
 
     ################################################
-    # Get all the ronin_address in the scholarship #
+    # GEt the price an axie cost to breed          #
     ################################################
     if "$breed_cost " in message.content:
         print("\nBreed_costs, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
+        if message.author.id != config['personal']['discord_id']:
+            return await message.channel.send("This command is only available for manager")
         if " " in message.content:
             id = message.content.split(" ")[1]
             if not id.isdigit():
@@ -531,7 +543,16 @@ async def on_message(message):
     # Get account balance                          #
     ################################################
     if "account_balance" in message.content:
-        if "$account_balance " in message.content:
+        if message.author.id != config['personal']['discord_id']:
+            return await message.channel.send("This command is only available for manager")
+        print("\nAccount balance, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
+        await message.channel.send("\nGetting account balance. This cna take some time.\n")
+        if message.content == '$account_balance':
+            datas = scholar.get_account_balances(config['personal']['ronin_address'])
+            msg = "Balances for account **{}**\n".format(datas['ronin_address'])
+            msg += "WETH : **{}** | AXS : **{}** | SLP : **{}** | Axies : **{}**\n".format(datas['WETH'], datas['AXS'], datas['SLP'], datas['axies'])
+            return await message.channel.send(msg)
+        elif "$account_balance " in message.content:
             if not ' ' in message.content:
                 ronin_address = config['personal']['ronin_address']
             else:
@@ -567,6 +588,8 @@ async def on_message(message):
     # Get all the ronin_address in the scholarship #
     ################################################
     if message.content == "$all_address":
+        if message.author.id != config['personal']['discord_id']:
+            return await message.channel.send("This command is only available for manager")
         print("\nall_address, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         l = list()
         i = 0
