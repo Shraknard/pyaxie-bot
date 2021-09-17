@@ -34,8 +34,8 @@ With this command, you'll not have to write the config in secret.yaml again
 
 "**Commands for manager :**"  
 
-"`$claim 506011891353903121` = Claim for the given discord ID (Manager only)  "  
-"`$all_claim` = Claim for all the scholars (Manager only)  "  
+"`$claim 506011891353903121` = Claim for the given discord ID"  
+"`$all_claim` = Claim for all the scholars"  
 "`$all_mmr` = Send scholar list sorted by MMR  "  
 "`$all_rank` = Send scholar list sorted by rank  "  
 "`$payout` = Send the available SLP to manager and scholars  "  
