@@ -90,14 +90,15 @@ def get_account_from_ronin(ronin_address):
 
 
 def log(message="", end="\n"):
+    pprint(message + end)
     f = open('pyaxie.log', "a")
     og = sys.stdout
     print(message, end=end, flush=True)
     sys.stdout = f
     print(message, end=end)
-    sys.stdout = og
     f.flush()
     f.close()
+    sys.stdout = og
 
 
 @client.event
@@ -136,7 +137,10 @@ async def on_message(message):
                                     "\n`$all_rank` = Send scholar list sorted by rank  " +
                                     "\n`$payout` = Send the available SLP to manager and scholars  " +
                                     "\n`$payout me` = Send all scholarship SLP directly to manager account with no split" +
-                                    "\n`$transfer 0xfrom_address 0xto_address amount` = Transfer amount SLP from from_address to to_address")
+                                    "\n`$transfer 0xfrom_address 0xto_address amount` = Transfer amount SLP from from_address to to_address" +
+                                    "\n`$breed_infos` = How much does it cost to breed now. You can also specify a breed lvl (0-6)" +
+                                    "\n`$breed_cost 123456` = How much did you spent breeding an axie. (take AXS/SLP prices from time of breed)")
+
         return
 
     ##############################
@@ -231,7 +235,7 @@ async def on_message(message):
             rm = message.content.split('_')[1]
             rm = rm.split(' ')[0] if ' ' in rm else rm
             l = list()
-            msg = ""
+
             for account in config['scholars']:
                 rank_mmr = scholar.get_rank_mmr(config['scholars'][account]['ronin_address'])
                 rank_mmr['name'] = str(client.get_user(config['scholars'][account]['discord_id'])).split('#', -1)[0]
@@ -241,11 +245,16 @@ async def on_message(message):
             nb = message.content.split(' ')[1] if ' ' in message.content else 99999
             if nb != 99999 and nb.isdigit():
                 nb = int(nb)
+
+            msg = ""
             i = 1
             for m in mmrs:
                 if i > nb:
                     break
                 msg += "\nTop [**{}**] : **{}** | {}".format(i, m[rm], m['name'])
+                if i % 20 == 0:
+                    await message.channel.send(msg)
+                    msg = ""
                 i += 1
 
         except ValueError as e:
@@ -259,6 +268,7 @@ async def on_message(message):
     if "$claim" in message.content:
         if config['url_api'] == '':
             return await message.channel.send("No api_url set in secret.yaml. You have to FIND and add it by yourself as it is private and I can't make it public.")
+
         print("\nClaim, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         try:
             if message.content == "$claim":
@@ -275,6 +285,7 @@ async def on_message(message):
                 await message.channel.send("{} SLP claimed for {} !\nTransaction hash of the claim : {} ".format(amount, scholar.name, str(scholar.claim_slp())))
             else:
                 await message.channel.send("No SLP to claim for {} at this moment !\n".format(message.author.name))
+
         except ValueError as e:
             await message.channel.send("Error while claiming : " + str(e))
         return
@@ -286,7 +297,6 @@ async def on_message(message):
         print("\nAll claim, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         if message.author.id != config['personal']['discord_id']:
             return await message.channel.send("This command is only available for manager")
-
 
         await message.channel.send("\nClaiming for all scholars... This can take some time.\n")
 
@@ -323,8 +333,8 @@ async def on_message(message):
 
             tx = scholar.payout()
             claimed = scholar.get_claimed_slp()
-            msg = "Sent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTansaction : https://explorer.roninchain.com/tx/{}\n".format(claimed * (1 - scholar.payout_percentage), scholar.ronin_address, config['personal']['ronin_address'], tx[0])
-            msg += "-----\nSent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTansaction : https://explorer.roninchain.com/tx/{}\n".format(claimed * scholar.payout_percentage, scholar.ronin_address, to_address, tx[1])
+            msg = "Sent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTransaction : <https://explorer.roninchain.com/tx/{}>\n".format(claimed * (1 - scholar.payout_percentage), scholar.ronin_address, config['personal']['ronin_address'], tx[0])
+            msg += "-----\nSent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTansaction : <https://explorer.roninchain.com/tx/{}>\n".format(claimed * scholar.payout_percentage, scholar.ronin_address, to_address, tx[1])
             return await message.channel.send(msg)
 
         # Payout for all scholars
@@ -337,7 +347,6 @@ async def on_message(message):
                     scholar = pyaxie(config['scholars'][account]['ronin_address'], config['scholars'][account]['private_key'])
                     unclaimed = scholar.get_unclaimed_slp()
                     claimed = scholar.get_claimed_slp()
-                    time.sleep(5)
 
                     if datetime.utcnow() + timedelta(days=-14) < datetime.fromtimestamp(scholar.get_last_claim()) or unclaimed <= 0:
                         await message.channel.send("**No SLP to claim for {} at this moment** \n".format(scholar.name))
@@ -346,15 +355,15 @@ async def on_message(message):
                         await message.channel.send("**No SLP to send for {} account.**\n".format(scholar.name))
                     elif "me" in message.content:
                         tx = scholar.transfer_slp(config['personal']['ronin_address'], claimed)
-                        await message.channel.send("**All the {} SLP are sent to you !**\n Transaction : https://explorer.roninchain.com/tx/{} \n".format(claimed, str(tx)))
+                        await message.channel.send("**All the {} SLP are sent to you !**\n Transaction : <https://explorer.roninchain.com/tx/{}> \n".format(claimed, str(tx)))
                     else:
                         res = scholar.payout()
-                        msg = "Sent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTansaction : https://explorer.roninchain.com/tx/{}\n".format(claimed * (1 - scholar.payout_percentage), scholar.ronin_address, config['personal']['ronin_address'], res[0])
-                        msg += "-----\nSent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTansaction : https://explorer.roninchain.com/tx/{}\n".format(claimed * scholar.payout_percentage, scholar.ronin_address, scholar.personal_ronin, res[1])
+                        msg = "Sent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTransaction : <https://explorer.roninchain.com/tx/{}>\n".format(claimed * (1 - scholar.payout_percentage), scholar.ronin_address, config['personal']['ronin_address'], res[0])
+                        msg += "-----\nSent **{} SLP**\nFrom : **{}**\nTo : **{}**\nTransaction : <https://explorer.roninchain.com/tx/{}>\n".format(claimed * scholar.payout_percentage, scholar.ronin_address, scholar.personal_ronin, res[1])
                         await message.channel.send(msg)
 
                     await message.channel.send("\n-------------\n")
-                await message.channel.send("\n\n --- END OF PAYOUT ---")
+                await message.channel.send("\n\n--- END OF PAYOUT ---")
             except ValueError as e:
                 await message.channel.send("Error while paying out : " + str(e))
         return
@@ -386,8 +395,7 @@ async def on_message(message):
                 tx = scholar.transfer_slp(ronin_address, int(cmd[3]))
             except ValueError as e:
                 return e
-            await message.channel.send("Sent **{}** SLP\n**From : ** {}\n**To : ** {}\n**Transaction : ** {} \
-                                       ".format(cmd[3], cmd[1], ronin_address, tx))
+            await message.channel.send("Sent **{} SLP**\nFrom : ** {}\n**To : ** {}** \nTransaction : <https://explorer.roninchain.com/tx/{}>\n".format(cmd[3], cmd[1], ronin_address, tx))
         except ValueError as e:
             await message.channel.send("Error while transfering SLP : " + str(e))
         return
@@ -422,31 +430,43 @@ async def on_message(message):
         except ValueError as e:
             await message.channel.send("Error while getting axies : " + str(e))
         return
-    elif message.content == "$all_axies":
-        print("\nListing of all axies in the scholarship, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
-        await message.channel.send("\n------------------------------------------------\nGetting list of all the axies in the scholarship ! This can take some time.\n")
+    elif "$all_axies" in message.content:
+        if "$all_axies " in message.content:
+            axie_class = message.content.split(' ')[1]
+            if axie_class.lower() in ["reptile", "plant", "dusk", "aquatic", "bird", "dawn", "beast", "bug"]:
+                axies = scholar.get_all_axie_class(axie_class)
+            else:
+                return await message.channel.send(axie_class + " is not a class. Class list : Reptile, Plant, Dusk, Aquatic, Bird, Dawn, Beast, Bug ")
 
-        try:
-            for account in config['scholars']:
-                scholar = pyaxie(config['scholars'][account]['ronin_address'], config['scholars'][account]['private_key'])
-                axies = scholar.get_axie_list()
+            print("\nListing of all " + axie_class + " axies in the scholarship, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
+            await message.channel.send("Getting list of all the " + axie_class + " axies in the scholarship ! This can take some time.\n")
+            for axie in axies:
+                await message.channel.send("\n" + scholar.axie_link(int(axie['id'])) + "\n")
+                await message.channel.send(file=discord.File(scholar.download_axie_image(int(axie['id']))))
+            await message.channel.send("\n----------- END OF AXIES LIST ----------")
+        else:
+            print("\nListing of all axies in the scholarship, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
+            await message.channel.send("Getting list of all the axies in the scholarship ! This can take some time.\n")
+            try:
+                axies = scholar.get_all_axie_list()
                 for axie in axies:
                     await message.channel.send("\n" + scholar.axie_link(int(axie['id'])) + "\n")
                     await message.channel.send(file=discord.File(scholar.download_axie_image(int(axie['id']))))
-            await message.channel.send("\n----------- END OF AXIES LIST ----------")
-        except ValueError as e:
-            await message.channel.send("Error while getting axies : " + str(e))
+                await message.channel.send("\n----------- END OF AXIES LIST ----------")
+            except ValueError as e:
+                await message.channel.send("Error while getting axies : " + str(e))
         return
 
     #################################################
     # Get a graph for burned/minted SLPs            #
     #################################################
     if message.content == "$graph":
+        print("\nGraph, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         try:
             path = scholar.get_mint_burn_graph()
             discord.File(path, filename=path)
             embed = discord.Embed(title="SLP data", description=" \n Usefull SLP data like prices and minted vs burned SLP.", color=0xf5f542)
-            total = json.loads(requests.get("https://explorer.roninchain.com/api/token/0xa8754b9fa15fc18bb59458815510e40a12cd2014").content)
+            total = json.loads(requests.get("<https://explorer.roninchain.com/api/>token/0xa8754b9fa15fc18bb59458815510e40a12cd2014").content)
 
             embed.add_field(name="Total SLP supply", value=total, inline=False)
             embed.add_field(name="SLP/USD", value=scholar.get_price("usd"), inline=True)
@@ -458,10 +478,116 @@ async def on_message(message):
             await message.channel.send("Error while getting burned/minted SLP graph : " + str(e))
         return
 
+    ################################################
+    # Breed cost                                   #
+    ################################################
+    if "$breed_infos" in message.content:
+        print("\nBreed_infos, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
+        costs = scholar.get_breed_cost()
+        if " " in message.content:
+            nb = message.content.split(" ")[1]
+            if not nb.isdigit():
+                return await message.channel.send("Error breed level should be between **0** and 6. Example : `$breed_cost 2`")
+
+            nb = int(nb)
+            if nb > 0:
+                msg = "Breeding cost infos for breed level **{}**.    **AXS** : **${}** -|- **SLP** : **${}**\n\n".format(nb, scholar.get_price('axs'),scholar.get_price('slp'))
+                msg += "Breed price : **${}**\nAverage price from breed **0** to **{}** : **${}**\n".format(costs[nb]['price'], nb, costs[nb]['average_price'])
+                msg += "Total price for **{}** breed : **${}**".format(nb, costs[nb]['total_breed_price'])
+                return await message.channel.send(msg)
+
+        else:
+            msg = list()
+            nb = 0
+            for c in costs:
+                msg.append("**Breed level {}**\nBreed price : **${}**\nAverage price from breed **0** to **{}** : **${}**\nTotal price for **{}** breed : **${}**".format(
+                            nb, costs[c]['price'], nb, costs[c]['average_price'], nb, costs[c]['total_breed_price']))
+                nb += 1
+            return await message.channel.send("Breeding cost for all breed levels :\n\n" + '\n-----\n'.join(msg))
+
+    ################################################
+    # Get all the ronin_address in the scholarship #
+    ################################################
+    if "$breed_cost " in message.content:
+        print("\nBreed_costs, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
+        if " " in message.content:
+            id = message.content.split(" ")[1]
+            if not id.isdigit():
+                return await message.channel.send("Error in axie ID. Exampe: `$breed_costs 123456`")
+            id = int(id)
+            costs = scholar.get_axie_total_breed_cost(id)
+
+            m = "You spent **${}** while breeding axie number **{}**.\nThe average cost for 1 breed is : **${}**.\n\n".format(costs['total_breed_cost'], id, costs['average_breed_cost'])
+            m += "**CHILDREN**\n-------------\n"
+            nb = 0
+            for a in costs['details']:
+                m += "Child : https://marketplace.axieinfinity.com/axie/{}. Cost **${}**.\n".format(str(a['axie_id']), str(a['breed_cost']))
+                m += "SLP cost : **$" + str(a['slp_cost']) + "** | SLP price was : **$" + str(a['slp_price']) + "**\n"
+                m += "AXS cost : **$" + str(a['axs_cost']) + "** | AXS price was : **$" + str(a['axs_price']) + "**\n-----\n"
+                nb += 1
+            return await message.channel.send(m)
+
+    ################################################
+    # Get account balance                          #
+    ################################################
+    if "account_balance" in message.content:
+        if "$account_balance " in message.content:
+            if not ' ' in message.content:
+                ronin_address = config['personal']['ronin_address']
+            else:
+                ronin_address = message.content.split(' ')[1].replace('ronin:', '0x')
+                if not Web3.isAddress(ronin_address):
+                    return await message.channel.send("\nError in the address.\n")
+
+            datas = scholar.get_account_balances(ronin_address)
+            msg = "Balances for account **{}**\n".format(datas['ronin_address'])
+            msg += "WETH : **{}** | AXS : **{}** | SLP : **{}** | Axies : **{}**\n".format(datas['WETH'], datas['AXS'], datas['SLP'], datas['axies'])
+            return await message.channel.send(msg)
+        elif '$all' in message.content:
+            datas = scholar.get_all_accounts_balances()
+            msg = ""
+            total_slp = 0
+            total_axs = 0
+            total_axies = 0
+            total_weth = 0
+            for data in datas:
+                msg += "Balances for account **{}**\n".format(data['ronin_address'])
+                msg += "WETH : **{}** | AXS : **{}** | SLP : **{}** | Axies : **{}**\n".format(data['WETH'], data['AXS'], data['SLP'], data['axies'])
+                msg += "-----\n"
+                total_slp += data['SLP']
+                total_axs += data['AXS']
+                total_axies += data['axies']
+                total_weth += data['WETH']
+            s = "Balances for all infos in the scholarship.\nTotal WETH : **{}** | Total AXS : **{}** | Total SLP : **{}** | Total Axies : **{}**\n\n".format(total_weth, total_axs, total_slp, total_axies)
+            return await message.channel.send(s + msg)
+
+
+
+    ################################################
+    # Get all the ronin_address in the scholarship #
+    ################################################
+    if message.content == "$all_address":
+        print("\nall_address, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
+        l = list()
+        i = 0
+        await message.channel.send("\n Here is the list of address :\n")
+        l.append('**You** : ' + config['personal']['ronin_address'])
+        for scholar in config['scholars']:
+            l.append("**" + scholar + "** : " + config['scholars'][scholar]['ronin_address'])
+            if i == 20:
+                await message.channel.send('\n'.join(l))
+                l = list()
+                i = 0
+            i += 1
+        if len(l) > 0:
+            await message.channel.send('\n'.join(l))
+        return
+
     #################################################
     # Get profiles links                            #
     #################################################
     if "profile" in message.content:
+        print("\nProfile, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         url = "https://marketplace.axieinfinity.com/profile/ronin:"
         if message.content == "$all_profiles":
             try:
@@ -498,6 +624,7 @@ async def on_message(message):
     # Rename an axie                                #
     #################################################
     if "$rename" in message.content:
+        print("\nRename, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
         if message.author.id != config['personal']['discord_id']:
             await message.channel.send("This command is for managers only.")
             return
@@ -509,11 +636,11 @@ async def on_message(message):
                     scholar = get_account_from_ronin(str(axie['owner']))
                 else:
                     return await message.channel.send("Error in axie ID. Example: $rename_axie 1391353 new_name")
-
                 name = message.content.split(" ")[2]
             except ValueError as e:
                 await message.channel.send("Error : " + str(e))
                 return e
+
             if scholar is None:
                 return await message.channel.send("Error: No scholar found with this ID")
             if scholar.rename_axie(id, name):
@@ -522,30 +649,10 @@ async def on_message(message):
                 return await message.channel.send("Error renaming axie : **" + str(id) + "** to : **" + name + "**")
 
         ################################################
-        # Get all the ronin_address in the scholarship #
-        ################################################
-
-        if message.content == "$all_address":
-            l = list()
-            i = 0
-            await message.channel.send("\n Here is the list of address :\n")
-            l.append('You : ' + config['personal']['ronin_address'])
-            for scholar in config['scholars']:
-                l.append(scholar + " : " + config['scholars'][scholar]['ronin_address'])
-                if i == 20:
-                    await message.channel.send('\n'.join(l))
-                    l = list()
-                    i = 0
-                i += 1
-            if len(l) > 0:
-                await message.channel.send('\n'.join(l))
-            return
-
-        ################################################
         # Rename an account                            #
         ################################################
-
         if "$rename_account " in message.content:
+            print("\nRename account, asked by : " + message.author.name + " : " + str(message.author.id) + " at " + now.strftime("%d/%m/%Y %H:%M:%S"))
             await message.channel.send("This functionality is under construction")
             """
             try:
@@ -571,6 +678,11 @@ async def on_message(message):
             return
             """
             return
+
+
+
+
+
 
 # Loads secret.yaml datas
 with open("secret.yaml", "r") as file:

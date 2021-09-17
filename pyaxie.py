@@ -7,14 +7,13 @@ import datetime
 import time
 import math
 import pyaxie_utils
-import asyncio
 
 from datetime import timedelta, date
 from web3 import Web3, exceptions
 from web3.auto import w3
 from eth_account.messages import encode_defunct
 from pprint import pprint
-
+from pycoingecko import CoinGeckoAPI
 
 class pyaxie(object):
 
@@ -169,9 +168,9 @@ class pyaxie(object):
 		except ValueError as e:
 			return e['data']['profile']
 
-		self.account_id = json_data['accountId']
-		self.email = json_data['email']
-		self.name = json_data['name']
+		self.account_id = json_data['data']['profile']['accountId']
+		self.email = json_data['data']['profile']['email']
+		self.name = json_data['data']['profile']['name']
 		return json_data
 
 	def get_activity_log(self):
@@ -286,7 +285,7 @@ class pyaxie(object):
 	def get_all_axie_list(self):
 		"""
 		Get informations about the axies in all the accounts
-		:return: All axies datas
+		:return: List with all axies datas
 		"""
 		res = list()
 		for account in self.config['scholars']:
@@ -297,6 +296,19 @@ class pyaxie(object):
 			res.append(axie)
 		return res
 
+	def get_all_axie_class(self, axie_class, axies_datas=[]):
+		"""
+		Return all the axies of a specific class present in the scholarship
+		:param axie_class: Plant, Bast, Bird, etc...
+		:return: List of axie object of the specific class
+		"""
+		if not axies_datas:
+			axies_datas = self.get_all_axie_list()
+		l = list()
+		for axie in axies_datas:
+			if axie['class'] is not None and axie['class'].lower() == axie_class.lower():
+				l.append(axie)
+		return l
 
 	def get_axie_image(self, axie_id):
 		"""
@@ -331,8 +343,9 @@ class pyaxie(object):
 		dir = os.path.join(".", "img", "axies")
 		if not os.path.exists(dir):
 			os.mkdir(dir)
-		#if os.path.exists(path):
-		#	return path
+
+		if os.path.exists(path):
+			return path
 
 		img_data = requests.get('https://storage.googleapis.com/assets.axieinfinity.com/axies/'+axie_id+'/axie/axie-full-transparent.png').content
 		if len(img_data) <= 500:
@@ -357,7 +370,6 @@ class pyaxie(object):
 			return e
 		return pyaxie_utils.merge_images(l[0], l[1], l[2], self.name)
 
-
 	def get_axie_detail(self, axie_id):
 		"""
 		Get informations about an Axie based on its ID
@@ -369,9 +381,8 @@ class pyaxie(object):
 			r = requests.post(self.url, headers=self.headers, json=body)
 			json_data = json.loads(r.text)
 		except ValueError as e:
-			return e
+			return None
 		return json_data['data']['axie']
-
 
 	def get_axie_name(self, axie_id):
 		"""
@@ -413,6 +424,19 @@ class pyaxie(object):
 		"""
 		data = self.get_axie_detail(axie_id)
 		return data['class']
+
+	def get_axie_children(self, id=0, axie_data={}):
+		"""
+		Get the children of an axie on given id OR given axie datas
+		:param id: id of the axie
+		:param axie_data: axie_datas
+		:return: list of id of the children
+		"""
+		axie = self.get_axie_detail(id) if axie_data == {} else axie_data
+		l = list()
+		for children in axie['children']:
+			l.append(int(children['id']))
+		return l
 
 	def rename_axie(self, axie_id, new_name):
 		"""
@@ -549,7 +573,7 @@ class pyaxie(object):
 		self.slp_contract = contract
 		return contract
 
-	def get_axie_contract(self, ronin_web3, axie_abi_path):
+	def get_axie_contract(self, ronin_web3):
 		slp_contract_address = "0x32950db2a7164ae833121501c797d79e7b79d74c"
 		with open(self.axie_abi_path) as f:
 			try:
@@ -685,7 +709,7 @@ class pyaxie(object):
 
 		self.ronin_web3.eth.send_raw_transaction(signed_txn.rawTransaction)
 		txn = self.ronin_web3.toHex(self.ronin_web3.keccak(signed_txn.rawTransaction))
-		return txn if self.wait_confirmation(txn) else "Error : Transaction " + str(txn) + "reverted by EVM (Ethereum Virtual machine)"
+		return txn if self.wait_confirmation(txn) else "Error : Transaction " + str(txn) + " reverted by EVM (Ethereum Virtual machine)"
 
 	def wait_confirmation(self, txn):
 		"""
@@ -796,7 +820,126 @@ class pyaxie(object):
 		"""
 		return
 
+	def get_breed_cost(self, nb=-1):
+		"""
+		Get the breeding cost
+		:param nb: breed lvl (0-6)
+		:return: dict with datas about the breeding costs
+		"""
+		breeds = {0: 150, 1: 300, 2: 450, 3: 750, 4: 1200, 5: 1950, 6: 3150}
+		axs = self.get_price('axs')
+		slp = self.get_price('slp')
+		total = 0
+		res = dict()
 
+		for i in range(0, 7):
+			breed_price = int((breeds[i] * slp) * 2 + (axs * 2))
+			total += breed_price
+			res[i] = {'price': breed_price, 'total_breed_price': total, 'average_price': int(total/(1+i))}
+
+		if nb <= -1:
+			return res
+		return {nb, res[nb]}
+
+	def get_prices_from_timestamp(self, timestamp):
+		"""
+		Get prices for AXS, SLP and ETH at given date
+		:param timestamp: date in unix timestamp format
+		:return: Dict with the prices of currencies at given date
+		"""
+		cg = CoinGeckoAPI()
+		dt = datetime.datetime.fromtimestamp(timestamp)
+
+		price_history = cg.get_coin_history_by_id(id='smooth-love-potion', date=dt.date().strftime('%d-%m-%Y'), vsCurrencies=['usd'])
+		slp_price = price_history['market_data']['current_price']['usd']
+
+		price_history = cg.get_coin_history_by_id(id='axie-infinity', date=dt.date().strftime('%d-%m-%Y'), vsCurrencies=['usd'])
+		axs_price = price_history['market_data']['current_price']['usd']
+
+		price_history = cg.get_coin_history_by_id(id='ethereum', date=dt.date().strftime('%d-%m-%Y'), vsCurrencies=['usd'])
+		eth_price = price_history['market_data']['current_price']['usd']
+
+		return {'slp': slp_price, 'axs': axs_price, 'eth': eth_price, 'date': timestamp}
+
+	def ronin_txs(self, ronin_address=''):
+		if ronin_address == '':
+			ronin_address = self.config['personal']['ronin_address']
+
+		url = "https://explorer.roninchain.com/api/txs/" + str(ronin_address) + "?size=10000"
+		h = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36'}
+		response = requests.get(url, headers=h)
+
+		try:
+			json_data = json.loads(response.text)
+		except ValueError as e:
+			return e
+		return json_data['results']
+
+	def get_axie_total_breed_cost(self, axie_id, txs={}):
+		if not isinstance(axie_id, int):
+			return "Error in axie ID."
+		if txs == {}:
+			txs = self.ronin_txs()
+
+		children = self.get_axie_children(axie_id)
+		total = 0
+		l = list()
+		for i in txs:
+			if len(i['logs']) == 4 and len(i['logs'][3]['topics']) > 1 and int(i['logs'][3]['topics'][1], 16) in children:
+				prices = self.get_prices_from_timestamp(i['timestamp'])
+				slp_price = int(i['logs'][1]['data'], 16) * prices['slp']
+				axs_price = prices['axs'] * 2
+				l.append({'date': datetime.datetime.fromtimestamp(i['timestamp']).strftime('%d-%m-%Y'),
+							'axs_price': round(prices['axs'], 2), 'slp_price': round(prices['slp'], 2),
+							'breed_cost': round(slp_price + axs_price, 2), 'axs_cost': round(axs_price, 2),
+							'slp_cost': round(slp_price, 2), 'axie_id': int(i['logs'][3]['topics'][1], 16)})
+				total += slp_price + axs_price
+		res = dict()
+		res['total_breed_cost'] = round(total, 2)
+		res['average_breed_cost'] = round(total / len(children), 2)
+		res['details'] = l
+		return res
+
+	def get_account_balances(self, ronin_address=''):
+		"""
+		Get the different balances for a given account (AXS, SLP, WETH, AXIES)
+		:param ronin_address: ronin address of the account
+		:return: dict with currencies and amount
+		"""
+		if not ronin_address:
+			ronin_address = self.config['personal']['ronin_address']
+
+		url = "https://explorer.roninchain.com/api/tokenbalances/" + str(ronin_address).replace('ronin:', '0x')
+		headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36'}
+		response = requests.get(url, headers=headers)
+
+		try:
+			json_data = json.loads(response.text)
+		except ValueError as e:
+			return {'WETH': -1, 'AXS': -1, 'SLP': -1, 'axies': -1, 'ronin_address': ronin_address}
+
+		res = {'WETH': 0, 'AXS': 0, 'SLP': 0, 'axies': 0, 'ronin_address': ronin_address}
+		for data in json_data['results']:
+			if data['token_symbol'] == 'WETH':
+				res['WETH'] = round(int(data['balance']) / math.pow(10, 18), 6)
+			elif data['token_symbol'] == 'AXS':
+				res['AXS'] = round(int(data['balance']) / math.pow(10, 18), 2)
+			elif data['token_symbol'] == 'SLP':
+				res['SLP'] = int(data['balance'])
+			elif data['token_symbol'] == 'AXIE':
+				res['axies'] = int(data['balance'])
+		return res
+
+	def get_all_accounts_balances(self):
+		l = list()
+		l.append(self.config['personal']['ronin_address'])
+		for account in self.config['scholars']:
+			l.append(self.config['scholars'][account]['ronin_address'])
+
+		res = list()
+		for r in l:
+			res.append(self.get_account_balances(r))
+		return res
 
 
 
