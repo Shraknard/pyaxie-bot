@@ -2,6 +2,8 @@
 
 <img src="https://github.com/vmercadi/pyaxie-bot/blob/master/img/Pyaxie.png" alt="logo" width="200"/>
 
+## THIS BOT IS NOT UPDATED / SUPPORTED ANYMORE
+
 ## Description
 
 A python discord bot to help you manage your **Axie Infinity** scholarships.  
